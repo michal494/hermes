@@ -9,7 +9,8 @@ import org.xnio.SslClientAuthMode;
 import pl.allegro.tech.hermes.common.metric.MetricsFacade;
 import pl.allegro.tech.hermes.frontend.publishing.handlers.ThroughputLimiter;
 import pl.allegro.tech.hermes.frontend.publishing.preview.MessagePreviewPersister;
-import pl.allegro.tech.hermes.frontend.services.HealthCheckService;
+import pl.allegro.tech.hermes.frontend.readiness.HealthCheckService;
+import pl.allegro.tech.hermes.frontend.readiness.ReadinessChecker;
 
 import java.net.InetSocketAddress;
 
@@ -34,8 +35,6 @@ public class HermesServer {
     private final ReadinessChecker readinessChecker;
     private final MessagePreviewPersister messagePreviewPersister;
     private final ThroughputLimiter throughputLimiter;
-    private final TopicMetadataLoadingJob topicMetadataLoadingJob;
-    private final boolean topicMetadataLoadingJobEnabled;
     private final SslContextFactoryProvider sslContextFactoryProvider;
     private final PrometheusMeterRegistry prometheusMeterRegistry;
     private Undertow undertow;
@@ -46,11 +45,10 @@ public class HermesServer {
             HermesServerParameters hermesServerParameters,
             MetricsFacade metricsFacade,
             HttpHandler publishingHandler,
+            HealthCheckService healthCheckService,
             ReadinessChecker readinessChecker,
             MessagePreviewPersister messagePreviewPersister,
             ThroughputLimiter throughputLimiter,
-            TopicMetadataLoadingJob topicMetadataLoadingJob,
-            boolean topicMetadataLoadingJobEnabled,
             SslContextFactoryProvider sslContextFactoryProvider,
             PrometheusMeterRegistry prometheusMeterRegistry) {
 
@@ -59,11 +57,9 @@ public class HermesServer {
         this.metricsFacade = metricsFacade;
         this.publishingHandler = publishingHandler;
         this.prometheusMeterRegistry = prometheusMeterRegistry;
-        this.healthCheckService = new HealthCheckService();
+        this.healthCheckService = healthCheckService;
         this.readinessChecker = readinessChecker;
         this.messagePreviewPersister = messagePreviewPersister;
-        this.topicMetadataLoadingJob = topicMetadataLoadingJob;
-        this.topicMetadataLoadingJobEnabled = topicMetadataLoadingJobEnabled;
         this.sslContextFactoryProvider = sslContextFactoryProvider;
         this.throughputLimiter = throughputLimiter;
     }
@@ -72,10 +68,6 @@ public class HermesServer {
         configureServer().start();
         messagePreviewPersister.start();
         throughputLimiter.start();
-
-        if (topicMetadataLoadingJobEnabled) {
-            topicMetadataLoadingJob.start();
-        }
         healthCheckService.startup();
         readinessChecker.start();
     }
@@ -99,10 +91,6 @@ public class HermesServer {
         undertow.stop();
         messagePreviewPersister.shutdown();
         throughputLimiter.stop();
-
-        if (topicMetadataLoadingJobEnabled) {
-            topicMetadataLoadingJob.stop();
-        }
         readinessChecker.stop();
     }
 

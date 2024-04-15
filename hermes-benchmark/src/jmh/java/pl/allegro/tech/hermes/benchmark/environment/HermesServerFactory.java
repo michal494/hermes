@@ -15,7 +15,6 @@ import pl.allegro.tech.hermes.frontend.config.HermesServerProperties;
 import pl.allegro.tech.hermes.frontend.config.SchemaProperties;
 import pl.allegro.tech.hermes.frontend.config.SslProperties;
 import pl.allegro.tech.hermes.frontend.listeners.BrokerListeners;
-import pl.allegro.tech.hermes.frontend.producer.BrokerLatencyReporter;
 import pl.allegro.tech.hermes.frontend.producer.BrokerMessageProducer;
 import pl.allegro.tech.hermes.frontend.publishing.handlers.HandlersChainFactory;
 import pl.allegro.tech.hermes.frontend.publishing.handlers.ThroughputLimiter;
@@ -26,6 +25,7 @@ import pl.allegro.tech.hermes.frontend.publishing.handlers.end.TrackingHeadersEx
 import pl.allegro.tech.hermes.frontend.publishing.message.MessageContentTypeEnforcer;
 import pl.allegro.tech.hermes.frontend.publishing.message.MessageFactory;
 import pl.allegro.tech.hermes.frontend.publishing.metadata.DefaultHeadersPropagator;
+import pl.allegro.tech.hermes.frontend.readiness.HealthCheckService;
 import pl.allegro.tech.hermes.frontend.server.HermesServer;
 import pl.allegro.tech.hermes.frontend.validator.MessageValidators;
 import pl.allegro.tech.hermes.metrics.PathsCompiler;
@@ -70,11 +70,10 @@ class HermesServerFactory {
                 hermesServerProperties,
                 metricsFacade,
                 httpHandler,
+                new HealthCheckService(),
                 new DisabledReadinessChecker(false),
                 new NoOpMessagePreviewPersister(),
                 throughputLimiter,
-                null,
-                false,
                 null,
                 null);
     }
@@ -86,9 +85,6 @@ class HermesServerFactory {
         HandlersChainProperties handlersChainProperties = new HandlersChainProperties();
         TrackingHeadersExtractor trackingHeadersExtractor = new DefaultTrackingHeaderExtractor();
         SchemaProperties schemaProperties = new SchemaProperties();
-        BrokerLatencyReporter brokerLatencyReporter = new BrokerLatencyReporter(
-                false, null, null, null
-        );
 
         return new HandlersChainFactory(
                 topicsCache,
@@ -111,8 +107,7 @@ class HermesServerFactory {
                 throughputLimiter,
                 null,
                 false,
-                handlersChainProperties,
-                brokerLatencyReporter
+                handlersChainProperties
         ).provide();
     }
 }
